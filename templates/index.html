@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>로그모니터링</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-2.2.4.js" integrity="sha256-iT6Q9iMJYuQiMWNd9lDyBUStIq/8PuOW33aOqmvFpqI=" crossorigin="anonymous" charset="utf-8"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" charset="utf-8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.0/dist/jquery.validate.js" charset="utf-8"></script>
+    <script src="/static/js/monitor.js" charset="utf-8"></script>
+    <style>
+        label { top : 8px }
+    </style>
+</head>
+<body style="margin-top:15px">
+    <form id="form">
+    <div class="col-md-12">
+        <div class="panel panel-default">
+
+          <div class="panel-heading">
+             <div style="display: inline-block;">
+                <h3 class="panel-title">서비스 및 통계로그 API 선택</h3>
+             </div>
+              <div style="float:right; position:relative; top:-7px;">
+                <input type="button" value="모니터링 요청" id="reqBtn" class="btn btn-primary">
+                <input type="button" value="모니터링 중지" id="stopBtn" class="btn btn-danger" style="display:none">
+              </div>
+          </div>
+
+          <div class="panel-body">
+            <div class='col-sm-12'>
+                <div class="form-inline form-group">
+
+                    <div class="form-inline form-group col-sm-5">
+                        <label for="svc_cd" class="col-sm-2 control-label">서비스</label>
+                         <select class="form-control" name="svc_cd" id="svc_cd">
+                        </select>
+                    </div>
+
+                    <div class="form-inline form-group col-sm-5">
+                        <label for="api_cd" class="col-sm-2 control-label">API</label>
+                         <select class="form-control" name="api_cd" id="api_cd">
+                        </select>
+                    </div>
+                </div>
+
+            </div>
+          </div>
+        </div>
+    </div>
+    </form>
+
+    <div class="col-md-12">
+        <div class="panel panel-default">
+
+          <div class="panel-heading">
+             <div style="display: inline-block;">
+                <h3 class="panel-title">로그 파일 조회</h3>
+             </div>
+          </div>
+
+          <div class="panel-body">
+                <div class="form-inline form-group">
+                    <textarea id="monitoring_view" type="text" class="form-control" rows="30" style="width:100%"></textarea>
+                </div>
+          </div>
+        </div>
+    </div>
+
+</body>
+<script>
+    var g_interval;
+    var g_counter = 0;
+    // serialilze 함수
+    $.fn.serializeObject=function(){"use strict";var a={},b=function(b,c){var d=a[c.name];"undefined"!=typeof d&&d!==null?$.isArray(d)?d.push(c.value):a[c.name]=[d,c.value]:a[c.name]=c.value};return $.each(this.serializeArray(),b),a};
+
+    var apiList = JSON.parse( {{ req.apiList | tojson | safe }} );
+
+/*
+    $("#svc_cd").on( "change", function(evt){
+        var svcCd = $(this).val();
+        var html = "";
+
+        for( var i = 0 ; i < apiList.length ; i++ ){
+            if ( apiList[i].svc_cd == svcCd ){
+                for( var k = 0 ; k < apiList[i].api_list.length ; k++ ){
+                    var api = apiList[i].api_list[k];
+                    html +=  '<option value='+ api.api_cd + '>' + api.api_nm + '</option>'
+                }
+             }
+        }
+        $("#api_cd").empty().append( html );
+    });
+
+
+    // 초기화
+    function init(){
+        var svcListHtml = "";
+        for( var i = 0 ; i < apiList.length ; i++ ){
+            svcListHtml +=  '<option value='+ apiList[i].svc_cd + '>' + apiList[i].svc_nm + '</option>'
+        }
+        $("#svc_cd").append( svcListHtml ).trigger("change");
+    }
+
+    function initEvent(){
+        // 모니터링 요청
+        $( "#reqBtn" ).on("click", function(evt){
+            startMonitor();
+            toggleMonitor( true );
+        });
+
+        // 모니터링 중지
+        $( "#stopBtn" ).on("click", function(evt){
+            stopMonitor(g_interval);
+            toggleMonitor( false );
+        });
+    }
+
+    function startMonitor(){
+
+        g_counter = 0;
+        g_interval  = setInterval( function(){
+            g_counter++;
+            console.log( "interval = ", g_counter );
+            request();
+
+            if( g_counter == 3 ) {
+                stopMonitor( g_interval );
+                toggleMonitor( false );
+            }
+        }, 3000 );
+    }
+
+    function stopMonitor( interval ){
+        console.log("stop interval");
+        clearInterval( interval );
+    }
+
+    function request(){
+
+        var data = $("#form").serializeObject();
+        $.ajax({
+            url : "/monitor",
+            type: "POST",
+            data: JSON.stringify( data ) ,
+            contentType : "application/json; charset=utf-8",
+            //dataType: "json",
+            success: function (res) {
+                console.log( res );
+                var text = $("#monitoring_view").val();
+                for( var i = 0 ; i < res.length ; i++ ){
+                    text += res[i].file + ' ==> ' + res[i].log;
+                }
+                $("#monitoring_view").val( text );
+            },
+            error: function ( xhr, ajaxOptions, thrownError) {
+                console.error( "error = " + xhr.status + " " + thrownError);
+                alert( "error = " + xhr.status + " " + thrownError);
+            }
+         });
+    }
+
+    function toggleMonitor( visible ){
+        if( visible ){
+            $( "#reqBtn" ).hide();
+            $( "#stopBtn" ).show();
+        }
+        else{
+            $( "#reqBtn" ).show();
+            $( "#stopBtn" ).hide();
+        }
+    }
+    init();
+    initEvent();
+*/
+    monitor.init( apiList );
+</script>
+</html>
