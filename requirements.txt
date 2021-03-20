@@ -7,7 +7,7 @@ flask-json-api==1.0.0
 Flask-Jsonpify==1.5.0
 idna==2.8
 itsdangerous==1.1.0
-Jinja2==2.10
+Jinja2==2.11.3
 korail2==0.2.8
 MarkupSafe==1.1.0
 requests==2.21.0
